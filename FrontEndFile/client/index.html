@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Job Application Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #3b82f6;
+    }
+    .table th {
+      background-color: #e0f2fe;
+    }
+    .analytics-box {
+      background-color: #d1fae5;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-4 text-center">Job Application Tracker</h1>
+
+    <!-- Filter Section -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <input type="text" id="companyFilter" class="form-control" placeholder="Search by company name" />
+      </div>
+      <div class="col-md-3">
+        <select id="statusFilter" class="form-select">
+          <option value="">Filter by status</option>
+          <option>Applied</option>
+          <option>Interviewing</option>
+          <option>Offered</option>
+          <option>Rejected</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select id="sortBy" class="form-select">
+          <option value="application_date">Sort by date</option>
+          <option value="company_name">Sort by company</option>
+          <option value="job_title">Sort by title</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100" onclick="fetchApplications()">Apply</button>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <form id="applicationForm" class="mb-4">
+      <div class="row g-3">
+        <div class="col-md-3"><input type="text" id="job_title" class="form-control" placeholder="Job Title" required /></div>
+        <div class="col-md-3"><input type="text" id="company_name" class="form-control" placeholder="Company Name" required /></div>
+        <div class="col-md-3"><input type="date" id="application_date" class="form-control" required /></div>
+        <div class="col-md-3">
+          <select id="status" class="form-select" required>
+            <option value="">Status</option>
+            <option>Applied</option>
+            <option>Interviewing</option>
+            <option>Offered</option>
+            <option>Rejected</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-success mt-3">Add Application</button>
+    </form>
+
+    <!-- Table -->
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Job Title</th>
+          <th>Company</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="applicationsList"></tbody>
+    </table>
+
+    <!-- Analytics -->
+    <div class="analytics-box">
+      <h5>📊 Applications Summary</h5>
+      <div id="analyticsContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:5000";
+
+    function fetchApplications() {
+      const status = document.getElementById("statusFilter").value;
+      const company = document.getElementById("companyFilter").value;
+      const sort_by = document.getElementById("sortBy").value;
+
+      let url = `${API_URL}/applications?sort_by=${sort_by}`;
+      if (status) url += `&status=${status}`;
+      if (company) url += `&company=${company}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('applicationsList');
+          tbody.innerHTML = "";
+          data.forEach(app => {
+            const row = `
+              <tr>
+                <td>${app.id}</td>
+                <td>${app.job_title}</td>
+                <td>${app.company_name}</td>
+                <td>${app.application_date}</td>
+                <td>${app.status}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteApplication(${app.id})">Delete</button></td>
+              </tr>`;
+            tbody.innerHTML += row;
+          });
+        });
+    }
+
+    function deleteApplication(id) {
+      fetch(`${API_URL}/applications/${id}`, { method: "DELETE" })
+        .then(() => fetchApplications());
+    }
+
+    document.getElementById("applicationForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const job_title = document.getElementById("job_title").value;
+      const company_name = document.getElementById("company_name").value;
+      const application_date = document.getElementById("application_date").value;
+      const status = document.getElementById("status").value;
+
+      fetch(`${API_URL}/applications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_title, company_name, application_date, status })
+      })
+        .then(res => res.json())
+        .then(() => {
+          this.reset();
+          fetchApplications();
+          fetchAnalytics();
+        });
+    });
+
+    function fetchAnalytics() {
+      fetch(`${API_URL}/analytics`)
+        .then(res => res.json())
+        .then(data => {
+          const analyticsDiv = document.getElementById("analyticsContent");
+          analyticsDiv.innerHTML = `
+            <strong>Weekly:</strong> ${JSON.stringify(data.weekly)}<br>
+            <strong>Monthly:</strong> ${JSON.stringify(data.monthly)}
+          `;
+        });
+    }
+
+    // Load initial data
+    fetchApplications();
+    fetchAnalytics();
+  </script>
+</body>
+</html>
