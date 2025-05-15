@@ -9,14 +9,17 @@ app = Flask(__name__)
 CORS(app)
 init_db()
 
+@app.route('/applications', methods=['GET'])
+def get_applications():
+    # Logic to retrieve applications from your database
+    return jsonify({'message': 'List of applications will be returned here.'})
+
 def get_db_connection():
     conn = sqlite3.connect('job_applications.db')
     conn.row_factory = sqlite3.Row
     return conn
 
 @app.route('/applications', methods=['POST'])
-@app.route('/applications')
-def get_applications():
 def add_application():
     data = request.get_json()
     job_title = data['job_title']
