@@ -15,6 +15,8 @@ def get_db_connection():
     return conn
 
 @app.route('/applications', methods=['POST'])
+@app.route('/applications')
+def get_applications():
 def add_application():
     data = request.get_json()
     job_title = data['job_title']
