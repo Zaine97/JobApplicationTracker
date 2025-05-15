@@ -4,7 +4,7 @@ import sqlite3
 
 app = Flask(__name__)
 CORS(app)
-
+//
 DATABASE = 'applications.db'
 
 # 🔄 Connect to SQLite database
