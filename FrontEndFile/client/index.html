@@ -118,53 +118,6 @@
                 <td>${app.company_name}</td>
                 <td>${app.application_date}</td>
                 <td>${app.status}</td>
-                <td><button class="btn btn-danger btn-sm" onclick="deleteApplication(${app.id})">Delete</button></td>
-              </tr>`;
-            tbody.innerHTML += row;
-          });
-        });
-    }
-
-    function deleteApplication(id) {
-      fetch(`${API_URL}/applications/${id}`, { method: "DELETE" })
-        .then(() => fetchApplications());
-    }
-
-    document.getElementById("applicationForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const job_title = document.getElementById("job_title").value;
-      const company_name = document.getElementById("company_name").value;
-      const application_date = document.getElementById("application_date").value;
-      const status = document.getElementById("status").value;
-
-      fetch(`${API_URL}/applications`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_title, company_name, application_date, status })
-      })
-        .then(res => res.json())
-        .then(() => {
-          this.reset();
-          fetchApplications();
-          fetchAnalytics();
-        });
-    });
-
-    function fetchAnalytics() {
-      fetch(`${API_URL}/analytics`)
-        .then(res => res.json())
-        .then(data => {
-          const analyticsDiv = document.getElementById("analyticsContent");
-          analyticsDiv.innerHTML = `
-            <strong>Weekly:</strong> ${JSON.stringify(data.weekly)}<br>
-            <strong>Monthly:</strong> ${JSON.stringify(data.monthly)}
-          `;
-        });
-    }
-
-    // Load initial data
-    fetchApplications();
-    fetchAnalytics();
-  </script>
-</body>
-</html>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteApplication(${app
+::contentReference[oaicite:8]{index=8}
+ 
