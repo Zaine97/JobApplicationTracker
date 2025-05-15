@@ -4,7 +4,7 @@ import sqlite3
 
 app = Flask(__name__)
 CORS(app)
-//
+
 DATABASE = 'applications.db'
 
 # 🔄 Connect to SQLite database
@@ -12,6 +12,25 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
+
+# 🛠️ Initialize the database and create table if it doesn't exist
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company TEXT NOT NULL,
+            position TEXT NOT NULL,
+            date_applied TEXT NOT NULL,
+            status TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Initialize database when the app starts
+init_db()
 
 # ✅ Root route - redirects to the main applications page
 @app.route('/')
@@ -82,11 +101,12 @@ def delete_application(id):
 
     return jsonify({'message': 'Application deleted successfully'})
 
-# 🔄 Restart point (optional health check)
+# 🔄 Health check endpoint (optional)
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'}), 200
 
-# ✅ Run the app (for local testing only, not needed on Render)
+# ✅ Run the app locally (uncomment if testing locally)
 # if __name__ == '__main__':
+#     init_db()
 #     app.run(debug=True)
