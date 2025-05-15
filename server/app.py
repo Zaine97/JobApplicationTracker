@@ -1,96 +1,111 @@
 from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 import sqlite3
+from collections import Counter
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-DATABASE = 'applications.db'
+DATABASE = 'job_applications.db'
 
-# 🔄 Connect to SQLite database
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
-# 🛠️ Initialize the database and create table if it doesn't exist
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS applications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            company TEXT NOT NULL,
-            position TEXT NOT NULL,
-            date_applied TEXT NOT NULL,
+            job_title TEXT NOT NULL,
+            company_name TEXT NOT NULL,
+            application_date TEXT NOT NULL,
             status TEXT NOT NULL
         )
     ''')
     conn.commit()
     conn.close()
 
-# Initialize database when the app starts
 init_db()
 
-# ✅ Root route - redirects to the main applications page
 @app.route('/')
 def index():
     return redirect(url_for('get_applications'))
 
-# 📥 Create a new job application
 @app.route('/applications', methods=['POST'])
 def add_application():
     data = request.get_json()
-    company = data.get('company')
-    position = data.get('position')
-    date_applied = data.get('date_applied')
+    job_title = data.get('job_title')
+    company_name = data.get('company_name')
+    application_date = data.get('application_date')
     status = data.get('status')
 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO applications (company, position, date_applied, status)
+        INSERT INTO applications (job_title, company_name, application_date, status)
         VALUES (?, ?, ?, ?)
-    ''', (company, position, date_applied, status))
+    ''', (job_title, company_name, application_date, status))
     conn.commit()
     conn.close()
 
     return jsonify({'message': 'Application added successfully'}), 201
 
-# 📋 Get all job applications
 @app.route('/applications', methods=['GET'])
 def get_applications():
+    sort_by = request.args.get('sort_by', 'application_date')
+    status_filter = request.args.get('status')
+    company_filter = request.args.get('company')
+
+    query = 'SELECT * FROM applications'
+    filters = []
+    params = []
+
+    if status_filter:
+        filters.append('status = ?')
+        params.append(status_filter)
+    if company_filter:
+        filters.append('company_name LIKE ?')
+        params.append(f'%{company_filter}%')
+
+    if filters:
+        query += ' WHERE ' + ' AND '.join(filters)
+
+    if sort_by in ['application_date', 'company_name', 'job_title']:
+        query += f' ORDER BY {sort_by}'
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM applications')
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
 
     applications = [dict(row) for row in rows]
     return jsonify(applications)
 
-# 🛠️ Update a specific application
 @app.route('/applications/<int:id>', methods=['PUT'])
 def update_application(id):
     data = request.get_json()
-    company = data.get('company')
-    position = data.get('position')
-    date_applied = data.get('date_applied')
+    job_title = data.get('job_title')
+    company_name = data.get('company_name')
+    application_date = data.get('application_date')
     status = data.get('status')
 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         UPDATE applications
-        SET company = ?, position = ?, date_applied = ?, status = ?
+        SET job_title = ?, company_name = ?, application_date = ?, status = ?
         WHERE id = ?
-    ''', (company, position, date_applied, status, id))
+    ''', (job_title, company_name, application_date, status, id))
     conn.commit()
     conn.close()
 
     return jsonify({'message': 'Application updated successfully'})
 
-# ❌ Delete a specific application
 @app.route('/applications/<int:id>', methods=['DELETE'])
 def delete_application(id):
     conn = get_db_connection()
@@ -101,12 +116,36 @@ def delete_application(id):
 
     return jsonify({'message': 'Application deleted successfully'})
 
-# 🔄 Health check endpoint (optional)
+@app.route('/analytics', methods=['GET'])
+def analytics():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT application_date FROM applications')
+    rows = cursor.fetchall()
+    conn.close()
+
+    dates = [row['application_date'] for row in rows]
+    weekly = Counter()
+    monthly = Counter()
+
+    for date_str in dates:
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            week = date_obj.strftime('%Y-W%U')
+            month = date_obj.strftime('%Y-%m')
+            weekly[week] += 1
+            monthly[month] += 1
+        except ValueError:
+            continue
+
+    return jsonify({
+        'weekly': dict(weekly),
+        'monthly': dict(monthly)
+    })
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok'}), 200
 
-# ✅ Run the app locally (uncomment if testing locally)
-# if __name__ == '__main__':
-#     init_db()
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
